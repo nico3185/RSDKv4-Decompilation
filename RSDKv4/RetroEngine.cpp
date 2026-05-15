@@ -40,10 +40,25 @@ bool ProcessEvents()
             case SDL_WINDOWEVENT:
                 switch (Engine.sdlEvents.window.event) {
                     case SDL_WINDOWEVENT_MAXIMIZED: {
-                        SDL_RestoreWindow(Engine.window);
-                        SDL_SetWindowFullscreen(Engine.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-                        SDL_ShowCursor(SDL_FALSE);
                         Engine.isFullScreen = true;
+                        SetFullScreen(true);
+                        break;
+                    }
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    case SDL_WINDOWEVENT_RESIZED: {
+                        if (Engine.isFullScreen)
+                            break;
+                        int w = 0, h = 0;
+                        SDL_GetWindowSize(Engine.window, &w, &h);
+                        float aspect            = SCREEN_XSIZE_CONFIG / (float)SCREEN_YSIZE;
+                        displaySettings.height  = h;
+                        displaySettings.width   = (int)(aspect * displaySettings.height);
+                        displaySettings.offsetX = abs(w - displaySettings.width) / 2;
+                        if (displaySettings.width > w) {
+                            displaySettings.offsetX = 0;
+                            displaySettings.width   = w;
+                        }
+                        SetupViewport();
                         break;
                     }
                     case SDL_WINDOWEVENT_CLOSE: return false;
@@ -201,6 +216,30 @@ bool ProcessEvents()
                         SetFullScreen(Engine.isFullScreen);
                         break;
 
+                    case SDLK_b:
+                        if (Engine.sdlEvents.key.keysym.mod & (KMOD_CTRL | KMOD_GUI)) {
+                            if (!Engine.isFullScreen)
+                                SetBorderless(!Engine.borderless);
+                        }
+                        break;
+
+                    case SDLK_EQUALS:
+                    case SDLK_PLUS:
+                    case SDLK_KP_PLUS:
+                        if (Engine.sdlEvents.key.keysym.mod & (KMOD_CTRL | KMOD_GUI)) {
+                            Engine.windowScale++;
+                            ApplyWindowScale();
+                        }
+                        break;
+
+                    case SDLK_MINUS:
+                    case SDLK_KP_MINUS:
+                        if (Engine.sdlEvents.key.keysym.mod & (KMOD_CTRL | KMOD_GUI)) {
+                            Engine.windowScale--;
+                            ApplyWindowScale();
+                        }
+                        break;
+
                     case SDLK_F5:
                         if (Engine.devMenu) {
                             currentStageFolder[0] = 0; // reload all assets & scripts
@@ -311,6 +350,8 @@ void RetroEngine::Init()
     StrCopy(dest, gamePath);
     StrAdd(dest, Engine.dataFile[0]);
     disableFocusPause = 0; // focus pause is ALWAYS enabled.
+#elif RETRO_PLATFORM == RETRO_OSX
+    sprintf(dest, "%s/%s", gamePath, Engine.dataFile[0]);
 #else
 
     StrCopy(dest, BASE_PATH);
@@ -324,8 +365,12 @@ void RetroEngine::Init()
 #if !RETRO_USE_ORIGINAL_CODE
     for (int i = 1; i < RETRO_PACK_COUNT; ++i) {
         if (!StrComp(Engine.dataFile[i], "")) {
+#if RETRO_PLATFORM == RETRO_OSX
+            sprintf(dest, "%s/%s", gamePath, Engine.dataFile[i]);
+#else
             StrCopy(dest, BASE_PATH);
             StrAdd(dest, Engine.dataFile[i]);
+#endif
             CheckRSDKFile(dest);
         }
     }

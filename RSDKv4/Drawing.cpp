@@ -103,7 +103,7 @@ int InitRenderDevice()
 
     SCREEN_CENTERX = SCREEN_XSIZE / 2;
     Engine.window  = SDL_CreateWindow(gameTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_XSIZE * Engine.windowScale,
-                                     SCREEN_YSIZE * Engine.windowScale, SDL_WINDOW_ALLOW_HIGHDPI | flags);
+                                     SCREEN_YSIZE * Engine.windowScale, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE | flags);
 
     if (!Engine.window) {
         PrintLog("ERROR: failed to create window!");
@@ -992,6 +992,36 @@ void SetFullScreen(bool fs)
 #endif
     }
     Engine.isFullScreen = fs;
+}
+
+void SetBorderless(bool b)
+{
+#if RETRO_USING_SDL2
+    if (!Engine.window)
+        return;
+    Engine.borderless = b;
+    if (Engine.isFullScreen)
+        return;
+    SDL_SetWindowBordered(Engine.window, b ? SDL_FALSE : SDL_TRUE);
+#endif
+}
+
+void ApplyWindowScale()
+{
+#if RETRO_USING_SDL2
+    if (!Engine.window || Engine.isFullScreen)
+        return;
+    if (Engine.windowScale < 1)
+        Engine.windowScale = 1;
+    if (Engine.windowScale > 6)
+        Engine.windowScale = 6;
+    SDL_SetWindowSize(Engine.window, SCREEN_XSIZE_CONFIG * Engine.windowScale, SCREEN_YSIZE * Engine.windowScale);
+    SDL_SetWindowPosition(Engine.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    displaySettings.width   = SCREEN_XSIZE_CONFIG * Engine.windowScale;
+    displaySettings.height  = SCREEN_YSIZE * Engine.windowScale;
+    displaySettings.offsetX = 0;
+    SetupViewport();
+#endif
 }
 
 void DrawObjectList(int Layer)

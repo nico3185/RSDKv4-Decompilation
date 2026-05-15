@@ -90,6 +90,121 @@ void PrintLog(const ushort *msg)
 #endif
 }
 
+#if !RETRO_USE_ORIGINAL_CODE
+#define SETTINGS_ROW_COUNT (7)
+
+static bool settingsDirty = false;
+
+static const char *ScalingModeName(int m)
+{
+    switch (m) {
+        case 0: return "NEAREST";
+        case 1: return "LINEAR";
+        default: return "?";
+    }
+}
+
+static const char *LanguageName(int l)
+{
+    switch (l) {
+        case RETRO_EN: return "ENGLISH";
+        case RETRO_FR: return "FRANCAIS";
+        case RETRO_IT: return "ITALIANO";
+        case RETRO_DE: return "DEUTSCH";
+        case RETRO_ES: return "ESPANOL";
+        case RETRO_JP: return "JAPANESE";
+        default: return "?";
+    }
+}
+
+static void FormatSettingRow(int row, char *out)
+{
+    switch (row) {
+        case 0: sprintf(out, "WINDOW SCALE:  %dX", Engine.windowScale); break;
+        case 1: sprintf(out, "FULLSCREEN:    %s", Engine.isFullScreen ? "ON" : "OFF"); break;
+        case 2: sprintf(out, "BORDERLESS:    %s", Engine.borderless ? "ON" : "OFF"); break;
+        case 3: sprintf(out, "SCALING MODE:  %s", ScalingModeName(Engine.scalingMode)); break;
+        case 4: sprintf(out, "BGM VOLUME:    %d%%", bgmVolume); break;
+        case 5: sprintf(out, "SFX VOLUME:    %d%%", sfxVolume); break;
+        case 6: sprintf(out, "LANGUAGE:      %s", LanguageName(Engine.language)); break;
+        default: out[0] = 0; break;
+    }
+}
+
+static void ApplySettingDelta(int row, int delta)
+{
+    settingsDirty = true;
+    switch (row) {
+        case 0:
+            Engine.windowScale += delta;
+            if (Engine.windowScale < 1)
+                Engine.windowScale = 6;
+            if (Engine.windowScale > 6)
+                Engine.windowScale = 1;
+            ApplyWindowScale();
+            break;
+        case 1:
+            Engine.isFullScreen ^= 1;
+            SetFullScreen(Engine.isFullScreen);
+            Engine.startFullScreen = Engine.isFullScreen;
+            break;
+        case 2:
+            if (Engine.isFullScreen)
+                break;
+            SetBorderless(!Engine.borderless);
+            break;
+        case 3: Engine.scalingMode = (Engine.scalingMode + delta + 2) % 2; break;
+        case 4:
+            bgmVolume += delta * 5;
+            if (bgmVolume < 0)
+                bgmVolume = 0;
+            if (bgmVolume > MAX_VOLUME)
+                bgmVolume = MAX_VOLUME;
+            break;
+        case 5:
+            sfxVolume += delta * 5;
+            if (sfxVolume < 0)
+                sfxVolume = 0;
+            if (sfxVolume > MAX_VOLUME)
+                sfxVolume = MAX_VOLUME;
+            break;
+        case 6: Engine.language = (Engine.language + delta + 6) % 6; break;
+        default: break;
+    }
+}
+
+static void BuildSettingsMenu(int initialSelection)
+{
+    SetupTextMenu(&gameMenu[0], 0);
+    AddTextMenuEntry(&gameMenu[0], "SETTINGS");
+    gameMenu[0].alignment      = 2;
+    gameMenu[0].selectionCount = 0;
+    gameMenu[0].selection1     = 0;
+    gameMenu[0].selection2     = 0;
+
+    SetupTextMenu(&gameMenu[1], 0);
+    char buffer[0x80];
+    for (int r = 0; r < SETTINGS_ROW_COUNT; ++r) {
+        FormatSettingRow(r, buffer);
+        AddTextMenuEntry(&gameMenu[1], buffer);
+    }
+    gameMenu[1].alignment        = 1;
+    gameMenu[1].selectionCount   = 1;
+    gameMenu[1].selection1       = initialSelection;
+    gameMenu[1].visibleRowCount  = 0;
+    gameMenu[1].visibleRowOffset = 0;
+    gameMenu[1].timer            = 0;
+    settingsDirty                = false;
+}
+
+static void RefreshSettingsRow(int row)
+{
+    char buffer[0x80];
+    FormatSettingRow(row, buffer);
+    EditTextMenuEntry(&gameMenu[1], buffer, row);
+}
+#endif
+
 void InitDevMenu()
 {
 #if RETRO_USE_MOD_LOADER
@@ -221,7 +336,7 @@ void ProcessStageSelect()
             if (keyPress.up)
                 gameMenu[0].selection2 -= 2;
 
-            int count = 15;
+            int count = 17;
 #if RETRO_USE_MOD_LOADER
             count += 2;
 #endif
@@ -251,7 +366,13 @@ void ProcessStageSelect()
                     gameMenu[1].selection1     = 0;
                     stageMode                  = DEVMENU_PLAYERSEL;
                 }
+#if !RETRO_USE_ORIGINAL_CODE
                 else if (gameMenu[0].selection2 == 13) {
+                    BuildSettingsMenu(0);
+                    stageMode = DEVMENU_SETTINGS;
+                }
+#endif
+                else if (gameMenu[0].selection2 == 15) {
                     ClearNativeObjects();
                     Engine.gameMode         = ENGINE_WAIT;
                     Engine.nativeMenuFadeIn = false;
@@ -275,7 +396,7 @@ void ProcessStageSelect()
 #endif
                 }
 #if RETRO_USE_MOD_LOADER
-                else if (gameMenu[0].selection2 == 15) {
+                else if (gameMenu[0].selection2 == 17) {
                     InitMods(); // reload mods
                     SetTextMenu(DEVMENU_MODMENU);
                 }
@@ -579,6 +700,43 @@ void ProcessStageSelect()
             break;
         }
 #endif
+#if !RETRO_USE_ORIGINAL_CODE
+        case DEVMENU_SETTINGS: // Settings
+        {
+            if (keyPress.down) {
+                gameMenu[1].selection1++;
+                if (gameMenu[1].selection1 >= SETTINGS_ROW_COUNT)
+                    gameMenu[1].selection1 = 0;
+            }
+            if (keyPress.up) {
+                gameMenu[1].selection1--;
+                if (gameMenu[1].selection1 < 0)
+                    gameMenu[1].selection1 = SETTINGS_ROW_COUNT - 1;
+            }
+            gameMenu[1].selection2 = gameMenu[1].selection1;
+
+            int delta = 0;
+            if (keyPress.right || keyPress.A || keyPress.start)
+                delta = 1;
+            else if (keyPress.left)
+                delta = -1;
+            if (delta != 0) {
+                ApplySettingDelta(gameMenu[1].selection1, delta);
+                RefreshSettingsRow(gameMenu[1].selection1);
+            }
+
+            DrawTextMenu(&gameMenu[0], SCREEN_CENTERX, 40);
+            DrawTextMenu(&gameMenu[1], SCREEN_CENTERX - 96, 72);
+
+            if (keyPress.B) {
+                if (settingsDirty)
+                    WriteSettings();
+                SetTextMenu(DEVMENU_MAIN);
+                gameMenu[0].selection2 = 13;
+            }
+            break;
+        }
+#endif
         default: break;
     }
 }
@@ -606,18 +764,20 @@ void SetTextMenu(int sm)
             AddTextMenuEntry(&gameMenu[0], " ");
             AddTextMenuEntry(&gameMenu[0], " ");
             AddTextMenuEntry(&gameMenu[0], " ");
-            AddTextMenuEntry(&gameMenu[0], "START GAME");
+            AddTextMenuEntry(&gameMenu[0], "START GAME");   // selection2 == 9
             AddTextMenuEntry(&gameMenu[0], " ");
-            AddTextMenuEntry(&gameMenu[0], "STAGE SELECT");
+            AddTextMenuEntry(&gameMenu[0], "STAGE SELECT"); // selection2 == 11
 #if !RETRO_USE_ORIGINAL_CODE
             AddTextMenuEntry(&gameMenu[0], " ");
-            AddTextMenuEntry(&gameMenu[0], "START MENU");
+            AddTextMenuEntry(&gameMenu[0], "SETTINGS");     // selection2 == 13
+            AddTextMenuEntry(&gameMenu[0], " ");
+            AddTextMenuEntry(&gameMenu[0], "START MENU");   // selection2 == 15
 #if RETRO_USE_MOD_LOADER
             AddTextMenuEntry(&gameMenu[0], " ");
-            AddTextMenuEntry(&gameMenu[0], "MODS");
+            AddTextMenuEntry(&gameMenu[0], "MODS");         // selection2 == 17
 #endif
             AddTextMenuEntry(&gameMenu[0], " ");
-            AddTextMenuEntry(&gameMenu[0], "EXIT GAME");
+            AddTextMenuEntry(&gameMenu[0], "EXIT GAME");    // last (15 / 17 / 19)
 #endif
             gameMenu[0].alignment        = 2;
             gameMenu[0].selectionCount   = 2;

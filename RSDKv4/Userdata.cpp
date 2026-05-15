@@ -194,8 +194,11 @@ void InitUserdata()
 #endif
 
 #if RETRO_PLATFORM == RETRO_OSX
-    sprintf(gamePath, "%s/RSDKv4", getResourcesPath());
-    sprintf(modsPath, "%s/RSDKv4/", getResourcesPath());
+    // getResourcesPath() returns either the .app bundle's Resources/ (when
+    // self-contained) or ~/Library/Application Support/RSDKv4 (with the
+    // directory already created). Either way it's a complete, writable path.
+    sprintf(gamePath, "%s", getResourcesPath());
+    sprintf(modsPath, "%s/", getResourcesPath());
 
     mkdir(gamePath, 0777);
 #elif RETRO_PLATFORM == RETRO_ANDROID

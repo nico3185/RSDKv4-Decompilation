@@ -95,6 +95,8 @@ void CopyFrameOverlay2x();
 
 void SetupViewport();
 void SetFullScreen(bool fs);
+void SetBorderless(bool b);
+void ApplyWindowScale();
 
 // Layer Drawing
 void DrawObjectList(int layer);

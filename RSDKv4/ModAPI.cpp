@@ -39,7 +39,11 @@ fs::path resolvePath(fs::path given)
 {
     if (given.is_relative())
         given = fs::current_path() / given; // thanks for the weird syntax!
-    for (auto &p : fs::directory_iterator{ given.parent_path() }) {
+    std::error_code ec;
+    fs::directory_iterator it(given.parent_path(), ec);
+    if (ec)
+        return given;
+    for (auto &p : it) {
         char pbuf[0x100];
         char gbuf[0x100];
         auto pf   = p.path().filename();
