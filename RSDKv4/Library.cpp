@@ -43,7 +43,6 @@ int RetroEngine_Run(const char *dataDir)
 {
     if (dataDir && *dataDir)
         RetroEngine_SetResourcesPath(dataDir);
-
     SDL_SetHint(SDL_HINT_WINRT_HANDLE_BACK_BUTTON, "1");
     Engine.Init();
     Engine.Run();

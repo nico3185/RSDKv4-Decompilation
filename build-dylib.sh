@@ -99,8 +99,14 @@ for src in "${SRCS_MM[@]}"; do
 done
 
 echo "==> linking ${OUT}"
+# The dylib lives at <Bundle>/Contents/Resources/Engines/libRSDKv4.dylib
+# inside Sonic Genesis.app. Add an LC_RPATH so the dynamic loader finds
+# SDL2.framework etc. in <Bundle>/Contents/Frameworks/ (i.e. two levels
+# up from the dylib).
 clang++ -dynamiclib -target arm64-apple-macos10.15 \
     -install_name "@rpath/libRSDKv4.dylib" \
+    -Wl,-rpath,@loader_path/../../Frameworks \
+    -Wl,-rpath,@loader_path \
     -o "${OUT}" \
     "${OBJS[@]}" \
     "${FRAMEWORKS[@]}"
