@@ -14,6 +14,13 @@
 #if !RETRO_USE_ORIGINAL_CODE && RETRO_PLATFORM == RETRO_OSX
 
 #include <string.h>
+#include <SDL_syswm.h>
+
+// Optional callback the host (the launcher) registers to receive the
+// engine's NSWindow* once it's created — used to addChildWindow it onto
+// the launcher's own window for "single-window" UX.
+typedef void (*RetroEngineWindowReadyFn)(void *nsWindowPtr);
+extern "C" RetroEngineWindowReadyFn gRetroEngineWindowReadyCallback = nullptr;
 
 // Storage for the override lives in cocoaHelpers.mm so the standalone
 // .app build (which doesn't include Library.cpp) still links. Just
@@ -70,6 +77,27 @@ int RetroEngine_RunInWindow(const char *dataDir, void *hostNSWindow)
 {
     RetroEngine_SetHostWindow(hostNSWindow);
     return RetroEngine_Run(dataDir);
+}
+
+/// Register a callback invoked once the engine has created its SDL window.
+/// The argument is the underlying NSWindow* (opaque to C). Lets the host
+/// reparent that window (e.g. addChildWindow) for single-window UX.
+void RetroEngine_SetWindowReadyCallback(RetroEngineWindowReadyFn cb)
+{
+    gRetroEngineWindowReadyCallback = cb;
+}
+
+/// Called by Drawing.cpp after SDL_CreateWindow succeeds. Resolves the
+/// NSWindow* via SDL_GetWindowWMInfo and forwards it to the host
+/// callback, if any.
+void RetroEngine_NotifyWindowReady(SDL_Window *window)
+{
+    if (!gRetroEngineWindowReadyCallback || !window) return;
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (SDL_GetWindowWMInfo(window, &info) && info.subsystem == SDL_SYSWM_COCOA) {
+        gRetroEngineWindowReadyCallback((void *)info.info.cocoa.window);
+    }
 }
 
 } // extern "C"

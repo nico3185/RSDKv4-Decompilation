@@ -1,5 +1,9 @@
 #include "RetroEngine.hpp"
 
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_PLATFORM == RETRO_OSX
+extern "C" void RetroEngine_NotifyWindowReady(SDL_Window *window);
+#endif
+
 ushort blendLookupTable[0x20 * 0x100];
 ushort subtractLookupTable[0x20 * 0x100];
 ushort tintLookupTable[0x10000];
@@ -145,6 +149,12 @@ int InitRenderDevice()
         PrintLog("ERROR: failed to create window!");
         return 0;
     }
+
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_PLATFORM == RETRO_OSX
+    // Notify the host (the launcher) that we have a window so it can
+    // reparent it into the launcher's window for single-window UX.
+    RetroEngine_NotifyWindowReady(Engine.window);
+#endif
 
 #if !RETRO_USING_OPENGL
     Engine.renderer = SDL_CreateRenderer(Engine.window, -1, SDL_RENDERER_ACCELERATED);
