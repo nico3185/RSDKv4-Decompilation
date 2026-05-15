@@ -2,9 +2,21 @@
 
 #import <Foundation/Foundation.h>
 #include "cocoaHelpers.hpp"
+#include <string.h>
+
+// Storage for the host-supplied resources-path override (set by
+// RetroEngine_SetResourcesPath in Library.cpp when the engine is loaded as
+// a dylib). Defining the storage here keeps the standalone .app build
+// linkable without depending on Library.cpp.
+extern "C" {
+char gRetroEngineResourcesPathOverride[1024] = {0};
+}
 
 const char* getResourcesPath(void)
 {
+    if (gRetroEngineResourcesPathOverride[0] != 0)
+        return gRetroEngineResourcesPathOverride;
+
     @autoreleasepool
     {
         // If the .app bundle's Resources/ directory contains the game data,
