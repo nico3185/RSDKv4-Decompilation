@@ -27,6 +27,31 @@ float touchHeightF = SCREEN_YSIZE;
 
 DrawListEntry drawListEntries[DRAWLAYER_COUNT];
 
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_USING_SDL2 && RETRO_USING_OPENGL
+// On Retina displays the SDL window's drawable framebuffer is larger than
+// the window in points (typically 2x). displaySettings.width/height are
+// stored in points; calling glViewport with point values only paints the
+// bottom-left fraction of the framebuffer. This helper converts a point
+// rect to drawable pixels so glViewport covers the full window.
+static void GLViewportFromPoints(int pointOffsetX, int pointWidth, int pointHeight)
+{
+    int rawW = pointWidth, rawH = pointHeight, offX = pointOffsetX;
+    if (Engine.window) {
+        int drawableW = 0, drawableH = 0, winW = 0, winH = 0;
+        SDL_GL_GetDrawableSize(Engine.window, &drawableW, &drawableH);
+        SDL_GetWindowSize(Engine.window, &winW, &winH);
+        if (winW > 0 && winH > 0 && drawableW > 0 && drawableH > 0) {
+            float sx = (float)drawableW / (float)winW;
+            float sy = (float)drawableH / (float)winH;
+            rawW = (int)(pointWidth  * sx);
+            rawH = (int)(pointHeight * sy);
+            offX = (int)(pointOffsetX * sx);
+        }
+    }
+    glViewport(offX, 0, rawW, rawH);
+}
+#endif
+
 int gfxDataPosition = 0;
 GFXSurface gfxSurface[SURFACE_COUNT];
 byte graphicData[GFXDATA_SIZE];
@@ -599,7 +624,11 @@ void SetScreenDimensions(int width, int height)
     SCREEN_CENTERX_F = aspect * SCREEN_CENTERY;
     SetPerspectiveMatrix(SCREEN_YSIZE * aspect, SCREEN_YSIZE_F, 0.0, 1000.0);
 #if RETRO_USING_OPENGL
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_USING_SDL2
+    GLViewportFromPoints(0, displaySettings.width, displaySettings.height);
+#else
     glViewport(0, 0, displaySettings.width, displaySettings.height);
+#endif
 #endif
 
     Engine.useHighResAssets = displaySettings.height > (SCREEN_YSIZE * 2);
@@ -749,7 +778,11 @@ void SetupViewport()
     SetPerspectiveMatrix(90.0, 0.75, 1.0, 5000.0);
 
 #if RETRO_USING_OPENGL
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_USING_SDL2
+    GLViewportFromPoints(displaySettings.offsetX, displaySettings.width, displaySettings.height);
+#else
     glViewport(displaySettings.offsetX, 0, displaySettings.width, displaySettings.height);
+#endif
 #endif
     int displayWidth = aspect * SCREEN_YSIZE;
 #if !RETRO_USE_ORIGINAL_CODE
@@ -969,7 +1002,11 @@ void SetFullScreen(bool fs)
 #else
         displaySettings.height = h;
         displaySettings.width  = w;
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_USING_SDL2
+        GLViewportFromPoints(0, displaySettings.width, displaySettings.height);
+#else
         glViewport(0, 0, displaySettings.width, displaySettings.height);
+#endif
 #endif
 #endif
 #endif
