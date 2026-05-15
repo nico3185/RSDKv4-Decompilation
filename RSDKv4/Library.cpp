@@ -20,6 +20,11 @@
 // declare it here.
 extern "C" char gRetroEngineResourcesPathOverride[1024];
 
+// Host NSWindow* (opaque to C) the engine should render into instead of
+// creating its own. Set by RetroEngine_SetHostWindow before RetroEngine_Run;
+// consulted by InitRenderDevice in Drawing.cpp (RETRO_OSX only).
+extern "C" void *gRetroEngineHostWindow = nullptr;
+
 extern "C" {
 
 /// Set the directory the engine should treat as its asset / writable root.
@@ -46,7 +51,25 @@ int RetroEngine_Run(const char *dataDir)
     SDL_SetHint(SDL_HINT_WINRT_HANDLE_BACK_BUTTON, "1");
     Engine.Init();
     Engine.Run();
+    // Clear host-window override on exit so a subsequent run without one
+    // doesn't accidentally pick up a dangling pointer.
+    gRetroEngineHostWindow = nullptr;
     return 0;
+}
+
+/// Set the host NSWindow* the engine should render into (Phase 2). Call
+/// this BEFORE RetroEngine_Run. Pass NULL to clear and let the engine
+/// create its own window as before.
+void RetroEngine_SetHostWindow(void *nsWindowPtr)
+{
+    gRetroEngineHostWindow = nsWindowPtr;
+}
+
+/// Convenience: set both, then run.
+int RetroEngine_RunInWindow(const char *dataDir, void *hostNSWindow)
+{
+    RetroEngine_SetHostWindow(hostNSWindow);
+    return RetroEngine_Run(dataDir);
 }
 
 } // extern "C"

@@ -127,6 +127,17 @@ int InitRenderDevice()
 #endif
 
     SCREEN_CENTERX = SCREEN_XSIZE / 2;
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_PLATFORM == RETRO_OSX
+    // Phase 2: when a host application (the launcher) loaded us as a dylib
+    // and supplied an NSWindow* via RetroEngine_SetHostWindow(), wrap that
+    // existing window with SDL_CreateWindowFrom so the game renders inside
+    // the launcher's window instead of a separate one.
+    extern void *gRetroEngineHostWindow;
+    if (gRetroEngineHostWindow) {
+        Engine.window = SDL_CreateWindowFrom(gRetroEngineHostWindow);
+    }
+    else
+#endif
     Engine.window  = SDL_CreateWindow(gameTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_XSIZE * Engine.windowScale,
                                      SCREEN_YSIZE * Engine.windowScale, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE | flags);
 
