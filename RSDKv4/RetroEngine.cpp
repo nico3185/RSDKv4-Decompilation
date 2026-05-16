@@ -212,6 +212,20 @@ bool ProcessEvents()
                         break;
 
                     case SDLK_F4:
+#if RETRO_PLATFORM == RETRO_OSX
+                        // When embedded in the Sonic Genesis launcher (the
+                        // launcher registers a window-ready callback before
+                        // calling RetroEngine_Run), the SDL window is a
+                        // child of the launcher's window. AppKit can't take
+                        // a child window fullscreen independently of its
+                        // parent — doing so crashes the GL context. Ignore
+                        // F4 entirely in that mode; the launcher's own
+                        // controls handle window sizing.
+                        {
+                            extern void (*gRetroEngineWindowReadyCallback)(void *);
+                            if (gRetroEngineWindowReadyCallback) break;
+                        }
+#endif
                         Engine.isFullScreen ^= 1;
                         SetFullScreen(Engine.isFullScreen);
                         break;
