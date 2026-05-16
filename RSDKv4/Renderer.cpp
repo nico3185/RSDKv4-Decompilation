@@ -816,7 +816,13 @@ void ClearTextures(bool keepBuffer)
 {
     for (int i = (keepBuffer ? 1 : 0); i < TEXTURE_COUNT; ++i) {
 #if RETRO_USING_OPENGL
-        glDeleteTextures(1, &textureList[i].id);
+        // textureList[i].id is initialised to -1 (UINT32_MAX as GLuint) for
+        // unused entries; calling glDeleteTextures on a bogus id segfaults
+        // on macOS when the GL context is being torn down. Skip those.
+        if (textureList[i].id != (GLuint)-1 && textureList[i].id != 0) {
+            glDeleteTextures(1, &textureList[i].id);
+            textureList[i].id = (GLuint)-1;
+        }
 #endif
         StrCopy(textureList[i].fileName, "");
     }
