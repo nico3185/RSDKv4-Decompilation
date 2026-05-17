@@ -87,6 +87,17 @@ void RetroEngine_SetWindowReadyCallback(RetroEngineWindowReadyFn cb)
     gRetroEngineWindowReadyCallback = cb;
 }
 
+/// Toggle the engine's fullscreen state. The launcher uses this to
+/// implement in-game fullscreen safely: it detaches the SDL child
+/// window from the launcher first (AppKit refuses to fullscreen a
+/// child window cleanly), then calls here so the engine flips the SDL
+/// window via SDL_SetWindowFullscreen and re-binds the GL viewport.
+void RetroEngine_ToggleFullscreen()
+{
+    Engine.isFullScreen ^= 1;
+    SetFullScreen(Engine.isFullScreen);
+}
+
 /// Called by Drawing.cpp after SDL_CreateWindow succeeds. Resolves the
 /// NSWindow* via SDL_GetWindowWMInfo and forwards it to the host
 /// callback, if any.
