@@ -382,7 +382,7 @@ public:
     int message = 0;
 #endif
     int gameDeviceType    = RETRO_STANDARD;
-    int globalBoxRegion   = REGION_JP;
+    int globalBoxRegion   = REGION_EU;
     bool nativeMenuFadeIn = false;
 
     bool trialMode        = false;

@@ -99,7 +99,9 @@ static const char *ScalingModeName(int m)
 {
     switch (m) {
         case 0: return "NEAREST";
-        case 1: return "LINEAR";
+        case 1: return "INTEGER";
+        case 2: return "SHARP BL";
+        case 3: return "BILINEAR";
         default: return "?";
     }
 }
@@ -153,7 +155,7 @@ static void ApplySettingDelta(int row, int delta)
                 break;
             SetBorderless(!Engine.borderless);
             break;
-        case 3: Engine.scalingMode = (Engine.scalingMode + delta + 2) % 2; break;
+        case 3: Engine.scalingMode = (Engine.scalingMode + delta + 4) % 4; break;
         case 4:
             bgmVolume += delta * 5;
             if (bgmVolume < 0)
@@ -726,7 +728,11 @@ void ProcessStageSelect()
             }
 
             DrawTextMenu(&gameMenu[0], SCREEN_CENTERX, 40);
-            DrawTextMenu(&gameMenu[1], SCREEN_CENTERX - 96, 72);
+            // Settings rows use right-alignment so the values line up;
+            // X here is the right edge of the longest entry, offset so
+            // the whole block sits centered (was -96, which leaked off
+            // the left of the screen).
+            DrawTextMenu(&gameMenu[1], SCREEN_CENTERX + 96, 72);
 
             if (keyPress.B) {
                 if (settingsDirty)
