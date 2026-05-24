@@ -1,7 +1,15 @@
 #include "RetroEngine.hpp"
 
 #if !RETRO_USE_ORIGINAL_CODE && RETRO_PLATFORM == RETRO_OSX
-extern "C" void RetroEngine_NotifyWindowReady(SDL_Window *window);
+// Library.cpp provides the strong definitions of these symbols when the
+// engine is built as libRSDKv4.dylib (the launcher's in-process host
+// path). In the standalone .app build, Library.cpp isn't in the Xcode
+// target — these weak fallbacks let the rest of the engine link cleanly
+// with no-op behavior. The strong defs in Library.cpp win in the dylib
+// build via standard Mach-O weak symbol resolution.
+extern "C" __attribute__((weak)) void *gRetroEngineHostWindow = nullptr;
+extern "C" __attribute__((weak)) void (*gRetroEngineWindowReadyCallback)(void *) = nullptr;
+extern "C" __attribute__((weak)) void RetroEngine_NotifyWindowReady(SDL_Window *window) { (void)window; }
 #endif
 
 ushort blendLookupTable[0x20 * 0x100];
@@ -37,7 +45,7 @@ DrawListEntry drawListEntries[DRAWLAYER_COUNT];
 // stored in points; calling glViewport with point values only paints the
 // bottom-left fraction of the framebuffer. This helper converts a point
 // rect to drawable pixels so glViewport covers the full window.
-static void GLViewportFromPoints(int pointOffsetX, int pointWidth, int pointHeight)
+void GLViewportFromPoints(int pointOffsetX, int pointWidth, int pointHeight)
 {
     int rawW = pointWidth, rawH = pointHeight, offX = pointOffsetX;
     if (Engine.window) {

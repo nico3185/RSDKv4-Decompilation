@@ -547,7 +547,16 @@ void RenderScene()
             glBindTexture(GL_TEXTURE_2D, renderbufferHiRes);
             glVertexPointer(3, GL_FLOAT, sizeof(DrawVertex), state->vertPtr);
             glTexCoordPointer(2, GL_FLOAT, sizeof(DrawVertex), &state->vertPtr->texCoordX);
+#if !RETRO_USE_ORIGINAL_CODE && RETRO_USING_SDL2
+            // displaySettings is in window points; on Retina the drawable
+            // framebuffer is larger, so a raw glViewport here would paint
+            // only the bottom-left fraction of the window (severe in
+            // fullscreen). Use the HiDPI-aware helper from Drawing.cpp.
+            extern void GLViewportFromPoints(int, int, int);
+            GLViewportFromPoints(displaySettings.offsetX, displaySettings.width, displaySettings.height);
+#else
             glViewport(displaySettings.offsetX, 0, displaySettings.width, displaySettings.height);
+#endif
             glPopMatrix();
             glMatrixMode(GL_MODELVIEW);
             glPopMatrix();

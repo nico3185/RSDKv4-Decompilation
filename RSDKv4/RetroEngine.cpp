@@ -46,10 +46,15 @@ bool ProcessEvents()
                     }
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                     case SDL_WINDOWEVENT_RESIZED: {
-                        if (Engine.isFullScreen)
-                            break;
+                        // Recompute viewport on every resize event, fullscreen
+                        // or windowed. The previous fullscreen early-exit left
+                        // displaySettings stale on display/resolution changes,
+                        // so the framebuffer rendered into the bottom-left of
+                        // the new window size instead of filling it.
                         int w = 0, h = 0;
                         SDL_GetWindowSize(Engine.window, &w, &h);
+                        if (w <= 0 || h <= 0)
+                            break;
                         float aspect            = SCREEN_XSIZE_CONFIG / (float)SCREEN_YSIZE;
                         displaySettings.height  = h;
                         displaySettings.width   = (int)(aspect * displaySettings.height);
