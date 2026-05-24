@@ -1018,14 +1018,13 @@ void SetFullScreen(bool fs)
         }
 
 #if RETRO_PLATFORM != RETRO_iOS && RETRO_PLATFORM != RETRO_ANDROID
-        float aspect            = SCREEN_XSIZE_CONFIG / (float)SCREEN_YSIZE;
+        // Fill the entire screen in fullscreen — the user's 16:10 / 16:9
+        // display will stretch the 424:240 framebuffer to fit instead of
+        // pillarboxing. Slight horizontal pixel distortion is preferred
+        // over visible black bars per user request.
+        displaySettings.width   = w;
         displaySettings.height  = h;
-        displaySettings.width   = aspect * displaySettings.height;
-        displaySettings.offsetX = abs(w - displaySettings.width) / 2;
-        if (displaySettings.width > w) {
-            displaySettings.offsetX = 0;
-            displaySettings.width   = w;
-        }
+        displaySettings.offsetX = 0;
 
         SetupViewport();
 #else
